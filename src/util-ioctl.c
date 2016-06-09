@@ -61,13 +61,16 @@ int GetIfaceMaxHWHeaderLength(const char *pcap_dev)
             ||
             (!strcmp("tap", pcap_dev))
             ||
-            (!strcmp("lo", pcap_dev)))
-        return ETHERNET_HEADER_LEN;
+            (!strcmp("lo", pcap_dev))) {
+        /* Add possible VLAN tag or Qing headers */
+        return 8 + ETHERNET_HEADER_LEN;
+    }
 
     if (!strcmp("ppp", pcap_dev))
         return SLL_HEADER_LEN;
-    /* SLL_HEADER_LEN is the biggest one */
-    return SLL_HEADER_LEN;
+    /* SLL_HEADER_LEN is the biggest one and
+       add possible VLAN tag and Qing headers */
+    return 8 + SLL_HEADER_LEN;
 }
 
 /**
@@ -117,18 +120,16 @@ int GetIfaceMTU(const char *pcap_dev)
  */
 int GetIfaceMaxPacketSize(const char *pcap_dev)
 {
-    int ll_header = GetIfaceMaxHWHeaderLength(pcap_dev);
-    int mtu = 0;
-
     if ((pcap_dev == NULL) || strlen(pcap_dev) == 0)
         return 0;
 
-    mtu = GetIfaceMTU(pcap_dev);
+    int mtu = GetIfaceMTU(pcap_dev);
     switch (mtu) {
         case 0:
         case -1:
             return 0;
     }
+    int ll_header = GetIfaceMaxHWHeaderLength(pcap_dev);
     if (ll_header == -1) {
         /* be conservative, choose a big one */
         ll_header = 16;
